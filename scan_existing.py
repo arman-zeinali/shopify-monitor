@@ -2,16 +2,16 @@
 scan_existing.py
 
 One-off scan of all currently-seeded products for candidate discount
-codes that may already be present, independent of change detection.
-Run this manually whenever you want a full sweep — not part of the
-regular polling loop.
+codes. Writes results to a single local file for review — does NOT
+send individual Telegram messages per hit, since this can produce
+dozens of results on a large catalog and isn't time-sensitive the
+way live detection is.
 """
 
 import yaml
 
 from database import get_connection
 from diff_engine import find_candidate_codes
-from notifier import send_notification
 
 
 def load_config():
@@ -38,37 +38,31 @@ def main():
 
     print(f"Scanning {len(rows)} products for existing candidate codes...")
 
-    found_count = 0
+    results = []
 
     for row in rows:
         product_id, title, handle, description_text = (
             row["product_id"], row["title"], row["handle"], row["description_text"]
         )
-
         codes = find_candidate_codes(description_text)
-
         if codes:
-            found_count += 1
-            link = build_product_link(base_url, handle)
+            results.append({
+                "title": title,
+                "handle": handle,
+                "codes": sorted(codes),
+                "link": build_product_link(base_url, handle),
+            })
 
-            message = (
-                f"🔎 EXISTING CODE CANDIDATE FOUND\n\n"
-                f"{title}\n"
-                f"Candidates: {', '.join(codes)}\n\n"
-                f"Link: {link}\n\n"
-                f"Description: {description_text[:300]}"
-            )
+    with open("scan_results.txt", "w") as f:
+        f.write(f"Scan of {len(rows)} products — {len(results)} flagged\n")
+        f.write("=" * 60 + "\n\n")
+        for r in results:
+            f.write(f"{r['title']}\n")
+            f.write(f"Candidates: {', '.join(r['codes'])}\n")
+            f.write(f"Link: {r['link']}\n")
+            f.write("-" * 60 + "\n")
 
-            print("=" * 40)
-            print(message)
-
-            send_notification(
-                message,
-                config["telegram"]["bot_token"],
-                config["telegram"]["chat_ids"],
-            )
-
-    print(f"\nScan complete. {found_count} product(s) flagged out of {len(rows)}.")
+    print(f"Done. {len(results)} product(s) flagged. Results written to scan_results.txt")
 
 
 if __name__ == "__main__":
