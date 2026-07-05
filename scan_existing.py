@@ -5,13 +5,9 @@ One-off scan of all currently-seeded products for:
   1. Candidate discount codes already present in descriptions.
   2. Variants already priced at $1 or less.
 
-Both checks run against current database state — this catches
-anything already live on the site before your monitor's diff-based
-detection ever saw a "before" state to compare against.
-
-Results are written to scan_results.txt for review. Does NOT send
-Telegram messages — this is a one-time historical check, not the
-live monitor. Run manually whenever you want a full sweep.
+Writes results to scan_results.txt for review. Does not send
+Telegram messages — this is a manual historical check, separate
+from the live monitor's real-time alerts.
 """
 
 import yaml
