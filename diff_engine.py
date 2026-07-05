@@ -8,9 +8,8 @@ Two independent detection paths:
   2. Description text anomalies — any token that doesn't read as
      normal prose (all-caps, mixed alphanumeric, or otherwise
      structurally unusual) is treated as a candidate discount code,
-     regardless of what words surround it. Serial-number-shaped
-     tokens (common in luxury resale descriptions for authentication
-     purposes) are filtered out separately.
+     regardless of what words surround it. LDJ's 6-character SKU
+     format is filtered out separately based on observed catalog data.
 
 Both return structured event dicts, not pre-formatted strings, so
 message formatting stays decoupled from detection logic.
@@ -23,7 +22,7 @@ from database import get_variants
 
 DOLLAR_THRESHOLD = 1.00
 
-TOKEN_PATTERN = re.compile(r'\b[A-Za-z0-9]{4,20}\b')
+TOKEN_PATTERN = re.compile(r'\b[A-Za-z0-9]{4,10}\b')
 
 STOPWORDS = {
     "NWT", "NWOT", "VGC", "EUC", "GUC", "FGC", "GENTLY", "USED",
@@ -54,10 +53,10 @@ def looks_like_measurement(token):
 
 def looks_like_serial_number(token):
     """
-    Filters manufacturer serial numbers / authentication codes.
-    These are dense alphanumeric strings with no recognizable
-    promo-word fragment and an unusually low vowel ratio — real
-    promo codes are almost always brandable and readable.
+    Filters manufacturer SKU/serial codes. Observed pattern from
+    LDJ's actual catalog: 6-character alphanumeric strings with no
+    promo-word fragment (e.g., QREYAB, 9KR90U, E3HBMA). Real promo
+    codes are brandable and readable; SKUs are arbitrary.
     """
     upper = token.upper()
 
@@ -65,17 +64,12 @@ def looks_like_serial_number(token):
         return False
 
     has_digit = any(c.isdigit() for c in token)
-    if not has_digit:
-        return False
+    has_alpha = any(c.isalpha() for c in token)
 
-    letters_only = "".join(c for c in upper if c.isalpha())
-    if not letters_only:
+    if len(token) == 6 and has_digit and has_alpha:
         return True
 
-    vowels = sum(1 for c in letters_only if c in "AEIOU")
-    vowel_ratio = vowels / len(letters_only)
-
-    return vowel_ratio < 0.2
+    return False
 
 
 def is_candidate_code(token):
