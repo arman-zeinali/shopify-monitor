@@ -8,9 +8,9 @@ Two independent detection paths:
   2. Description text anomalies — any token that doesn't read as
      normal prose (all-caps, mixed alphanumeric, or otherwise
      structurally unusual) is treated as a candidate discount code,
-     regardless of what words surround it. This does NOT require a
-     trigger word like "code" or "off" — LDJ may phrase this any way
-     they choose, so detection is based on token shape, not vocabulary.
+     regardless of what words surround it. Serial-number-shaped
+     tokens (common in luxury resale descriptions for authentication
+     purposes) are filtered out separately.
 
 Both return structured event dicts, not pre-formatted strings, so
 message formatting stays decoupled from detection logic.
@@ -23,43 +23,69 @@ from database import get_variants
 
 DOLLAR_THRESHOLD = 1.00
 
-# Matches any standalone alphanumeric token 4-20 characters long.
-# Deliberately broad — filtering happens in is_candidate_code(),
-# not in this pattern.
 TOKEN_PATTERN = re.compile(r'\b[A-Za-z0-9]{4,20}\b')
 
-# Known non-code tokens specific to luxury resale descriptions.
-# These appear constantly in normal product text and would otherwise
-# flood you with false positives. Extend this list as you observe
-# more noise in real alerts.
 STOPWORDS = {
-    # Condition abbreviations
     "NWT", "NWOT", "VGC", "EUC", "GUC", "FGC", "GENTLY", "USED",
-    # Hardware finish abbreviations
     "GHW", "SHW", "RHW", "PHW",
-    # Sizes
     "XS", "XXS", "SM", "MD", "LG", "XL", "XXL", "OS",
-    # Currency / misc
     "USD", "CAD", "LDJ", "SKU", "ID",
-    # Common capitalized words that appear in normal marketing prose
     "NEW", "SALE", "SHIP", "SHIPPING", "FREE", "GIFT", "LIMITED",
     "ONLY", "TODAY", "NOW", "HOT", "SOLD", "OUT",
+    "CM", "MM", "IN",
 }
+
+COMMON_PROMO_FRAGMENTS = (
+    "VIP", "SAVE", "OFF", "SALE", "FREE", "SHIP", "WELCOME",
+    "SUMMER", "WINTER", "SPRING", "FALL", "GIFT", "BDAY",
+    "BIRTHDAY", "THANK", "LOYAL", "MEMBER", "FIRST", "NEW",
+    "EXTRA", "BONUS", "SPECIAL", "SECRET", "LUCKY", "WIN",
+)
+
+
+def looks_like_measurement(token):
+    """
+    Filters tokens like '35cm', '10in' — dimension measurements
+    common in product descriptions, not codes.
+    """
+    match = re.match(r'^(\d+)(cm|mm|in|kg|lb|oz)$', token.lower())
+    return match is not None
+
+
+def looks_like_serial_number(token):
+    """
+    Filters manufacturer serial numbers / authentication codes.
+    These are dense alphanumeric strings with no recognizable
+    promo-word fragment and an unusually low vowel ratio — real
+    promo codes are almost always brandable and readable.
+    """
+    upper = token.upper()
+
+    if any(frag in upper for frag in COMMON_PROMO_FRAGMENTS):
+        return False
+
+    has_digit = any(c.isdigit() for c in token)
+    if not has_digit:
+        return False
+
+    letters_only = "".join(c for c in upper if c.isalpha())
+    if not letters_only:
+        return True
+
+    vowels = sum(1 for c in letters_only if c in "AEIOU")
+    vowel_ratio = vowels / len(letters_only)
+
+    return vowel_ratio < 0.2
 
 
 def is_candidate_code(token):
-    """
-    Returns True if a token looks structurally like a promo code
-    rather than a normal English word — based on shape, not on
-    matching a specific vocabulary of trigger words.
-
-    Signals used:
-      - Mixed letters + digits (e.g. VIP20, SAVE50) — strong signal,
-        almost never occurs in normal prose.
-      - All-caps word not in the stopword list — normal descriptions
-        are sentence-case, so an all-caps word stands out on its own.
-    """
     if token.upper() in STOPWORDS:
+        return False
+
+    if looks_like_measurement(token):
+        return False
+
+    if looks_like_serial_number(token):
         return False
 
     has_digit = any(c.isdigit() for c in token)
@@ -75,23 +101,13 @@ def is_candidate_code(token):
 
 
 def find_candidate_codes(text):
-    """
-    Scans arbitrary text and returns the set of tokens that look
-    like promo codes, using shape-based detection only. No keyword
-    gating — this runs on every description regardless of phrasing.
-    """
     if not text:
         return set()
-
     tokens = TOKEN_PATTERN.findall(text)
     return {t for t in tokens if is_candidate_code(t)}
 
 
 def compare_variants(product_id, incoming_variants):
-    """
-    incoming_variants: list of dicts with keys
-        variant_id, product_id, title, price, available
-    """
     events = []
     existing = get_variants(product_id)
 
@@ -160,15 +176,6 @@ def _diff_added_text(old_text, new_text):
 
 
 def compare_description(old_text, new_text):
-    """
-    Detects two independent things:
-      1. Any new candidate code appearing that wasn't there before
-         (NEW_DISCOUNT_CODE) — shape-based, no keyword requirement.
-      2. Any other description change with no new code (DESCRIPTION_CHANGED)
-         — still surfaced, since a code could be phrased in a way that
-         doesn't trip the shape detector, and you should see the raw
-         text regardless.
-    """
     events = []
 
     if old_text == new_text:
@@ -189,8 +196,6 @@ def compare_description(old_text, new_text):
                 "context": (added_text or new_text)[:300],
             })
 
-    # Always also surface the raw change, even if a code was found,
-    # in case the shape detector missed something in the same edit.
     events.append({
         "type": "DESCRIPTION_CHANGED",
         "diff_snippet": added_text[:300] if added_text else "(text removed or reordered)",
