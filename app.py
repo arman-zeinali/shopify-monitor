@@ -72,37 +72,41 @@ def upsert_variants(variants):
             insert_variant(v)
 
 
-def format_event_message(product_title, event):
+def format_event_message(product_title, product_handle, base_url, event):
+    link = f"{base_url}/products/{product_handle}"
     t = event["type"]
 
     if t == "DOLLAR_ITEM":
         return (
             f"🚨 $1 ITEM DETECTED\n\n{product_title}\n"
             f"Variant: {event['variant_title']}\n"
-            f"${event['old_price']:.2f} → ${event['new_price']:.2f}"
+            f"${event['old_price']:.2f} → ${event['new_price']:.2f}\n\n"
+            f"Link: {link}"
         )
     if t == "PRICE_CHANGED":
         return (
             f"💲 Price changed\n\n{product_title}\n"
             f"Variant: {event['variant_title']}\n"
-            f"${event['old_price']:.2f} → ${event['new_price']:.2f}"
+            f"${event['old_price']:.2f} → ${event['new_price']:.2f}\n\n"
+            f"Link: {link}"
         )
     if t == "BACK_IN_STOCK":
-        return f"🔵 Back in stock\n\n{product_title}\nVariant: {event['variant_title']}"
+        return f"🔵 Back in stock\n\n{product_title}\nVariant: {event['variant_title']}\n\nLink: {link}"
     if t == "SOLD_OUT":
-        return f"⚫ Sold out\n\n{product_title}\nVariant: {event['variant_title']}"
+        return f"⚫ Sold out\n\n{product_title}\nVariant: {event['variant_title']}\n\nLink: {link}"
     if t == "NEW_VARIANT":
-        return f"🆕 New variant\n\n{product_title}\n{event['variant_title']} — ${event['price']}"
+        return f"🆕 New variant\n\n{product_title}\n{event['variant_title']} — ${event['price']}\n\nLink: {link}"
     if t == "NEW_DISCOUNT_CODE":
         return (
-            f"🎁 Possible discount code\n\n{product_title}\n"
+            f"🎁 POSSIBLE DISCOUNT CODE\n\n{product_title}\n"
             f"Candidate: {event['code']}\n\n"
-            f"Context: {event['context']}"
+            f"Context: {event['context']}\n\n"
+            f"Link: {link}"
         )
     if t == "DESCRIPTION_CHANGED":
-        return f"📝 Description changed\n\n{product_title}\n\n{event['diff_snippet']}"
+        return f"📝 Description changed\n\n{product_title}\n\n{event['diff_snippet']}\n\nLink: {link}"
 
-    return f"{product_title}\n\n{t}"
+    return f"{product_title}\n\n{t}\n\nLink: {link}"
 
 
 def seed_database(raw_products):
@@ -143,8 +147,10 @@ def run_once(config):
 
             inserted += 1
             print(f"NEW PRODUCT: {product['title']}")
+
+            link = f"{config['store']['base_url']}/products/{product['handle']}"
             send_notification(
-                f"🆕 NEW PRODUCT\n\n{product['title']}",
+                f"🆕 NEW PRODUCT\n\n{product['title']}\n\nLink: {link}",
                 config["telegram"]["bot_token"],
                 config["telegram"]["chat_ids"],
             )
@@ -167,7 +173,12 @@ def run_once(config):
             for event in events:
                 print(event)
                 send_notification(
-                    format_event_message(product["title"], event),
+                    format_event_message(
+                        product["title"],
+                        product["handle"],
+                        config["store"]["base_url"],
+                        event,
+                    ),
                     config["telegram"]["bot_token"],
                     config["telegram"]["chat_ids"],
                 )
