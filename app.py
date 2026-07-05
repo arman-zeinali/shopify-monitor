@@ -146,7 +146,7 @@ def run_once(config):
             send_notification(
                 f"🆕 NEW PRODUCT\n\n{product['title']}",
                 config["telegram"]["bot_token"],
-                config["telegram"]["chat_id"],
+                config["telegram"]["chat_ids"],
             )
             continue
 
@@ -169,7 +169,7 @@ def run_once(config):
                 send_notification(
                     format_event_message(product["title"], event),
                     config["telegram"]["bot_token"],
-                    config["telegram"]["chat_id"],
+                    config["telegram"]["chat_ids"],
                 )
 
         update_product(product)

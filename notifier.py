@@ -4,19 +4,21 @@ import requests
 MAX_MESSAGE_LENGTH = 4096
 
 
-def send_notification(message, bot_token, chat_id, max_retries=3):
-    print("BOT:", repr(bot_token), "CHAT:", repr(chat_id))
-    
+def send_notification(message, bot_token, chat_ids, max_retries=3):
     """
-    Send a Telegram notification.
+    Send a Telegram notification to one or more chat IDs.
 
     Automatically:
     • skips if Telegram is not configured
     • truncates oversized messages
-    • retries temporary network failures
+    • retries temporary network failures per chat
+    • isolates failures — one chat failing does not block others
     """
 
-    if not bot_token or not chat_id:
+    if isinstance(chat_ids, str):
+        chat_ids = [chat_ids]
+
+    if not bot_token or not chat_ids:
         print("Telegram not configured. Skipping notification.")
         return
 
@@ -28,31 +30,25 @@ def send_notification(message, bot_token, chat_id, max_retries=3):
 
     url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
 
-    payload = {
-        "chat_id": chat_id,
-        "text": message,
-        "disable_web_page_preview": False,
-    }
+    for chat_id in chat_ids:
+        payload = {
+            "chat_id": chat_id,
+            "text": message,
+            "disable_web_page_preview": False,
+        }
 
-    for attempt in range(1, max_retries + 1):
-        try:
-            response = requests.post(
-                url,
-                json=payload,
-                timeout=15,
-            )
+        for attempt in range(1, max_retries + 1):
+            try:
+                response = requests.post(url, json=payload, timeout=15)
+                response.raise_for_status()
+                break
 
-            response.raise_for_status()
+            except requests.RequestException as error:
+                print(
+                    f"Telegram notification to {chat_id} attempt {attempt}/{max_retries} failed: {error}"
+                )
 
-            return
-
-        except requests.RequestException as error:
-
-            print(
-                f"Telegram notification attempt {attempt}/{max_retries} failed: {error}"
-            )
-
-            if attempt < max_retries:
-                time.sleep(2 * attempt)
-
-    print("Telegram notification permanently failed.")
+                if attempt < max_retries:
+                    time.sleep(2 * attempt)
+        else:
+            print(f"Telegram notification to {chat_id} permanently failed.")
