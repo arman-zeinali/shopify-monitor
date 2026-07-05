@@ -1,17 +1,25 @@
 """
 scan_existing.py
 
-One-off scan of all currently-seeded products for candidate discount
-codes. Writes results to a single local file for review — does NOT
-send individual Telegram messages per hit, since this can produce
-dozens of results on a large catalog and isn't time-sensitive the
-way live detection is.
+One-off scan of all currently-seeded products for:
+  1. Candidate discount codes already present in descriptions.
+  2. Variants already priced at $1 or less.
+
+Both checks run against current database state — this catches
+anything already live on the site before your monitor's diff-based
+detection ever saw a "before" state to compare against.
+
+Results are written to scan_results.txt for review. Does NOT send
+Telegram messages — this is a one-time historical check, not the
+live monitor. Run manually whenever you want a full sweep.
 """
 
 import yaml
 
 from database import get_connection
 from diff_engine import find_candidate_codes
+
+DOLLAR_THRESHOLD = 1.00
 
 
 def load_config():
@@ -29,40 +37,71 @@ def main():
 
     conn = get_connection()
     try:
-        cursor = conn.execute(
+        products = conn.execute(
             "SELECT product_id, title, handle, description_text FROM products"
-        )
-        rows = cursor.fetchall()
+        ).fetchall()
+
+        variants = conn.execute(
+            "SELECT product_id, variant_id, title, price, available FROM variants"
+        ).fetchall()
     finally:
         conn.close()
 
-    print(f"Scanning {len(rows)} products for existing candidate codes...")
+    print(f"Scanning {len(products)} products and {len(variants)} variants...")
 
-    results = []
+    product_lookup = {p["product_id"]: p for p in products}
 
-    for row in rows:
-        product_id, title, handle, description_text = (
-            row["product_id"], row["title"], row["handle"], row["description_text"]
-        )
-        codes = find_candidate_codes(description_text)
+    code_results = []
+    price_results = []
+
+    for p in products:
+        codes = find_candidate_codes(p["description_text"])
         if codes:
-            results.append({
-                "title": title,
-                "handle": handle,
+            code_results.append({
+                "title": p["title"],
+                "handle": p["handle"],
                 "codes": sorted(codes),
-                "link": build_product_link(base_url, handle),
+                "link": build_product_link(base_url, p["handle"]),
             })
 
+    for v in variants:
+        try:
+            price = float(v["price"])
+        except (TypeError, ValueError):
+            continue
+
+        if price <= DOLLAR_THRESHOLD:
+            product = product_lookup.get(v["product_id"])
+            if product:
+                price_results.append({
+                    "title": product["title"],
+                    "variant_title": v["title"],
+                    "price": price,
+                    "available": bool(v["available"]),
+                    "link": build_product_link(base_url, product["handle"]),
+                })
+
     with open("scan_results.txt", "w") as f:
-        f.write(f"Scan of {len(rows)} products — {len(results)} flagged\n")
+        f.write(f"Scan of {len(products)} products, {len(variants)} variants\n")
         f.write("=" * 60 + "\n\n")
-        for r in results:
+
+        f.write(f"$1-OR-LESS ITEMS: {len(price_results)} found\n")
+        f.write("-" * 60 + "\n")
+        for r in price_results:
+            f.write(f"{r['title']} — {r['variant_title']}\n")
+            f.write(f"Price: ${r['price']:.2f} | In stock: {r['available']}\n")
+            f.write(f"Link: {r['link']}\n\n")
+
+        f.write("\n")
+        f.write(f"CANDIDATE CODES: {len(code_results)} found\n")
+        f.write("-" * 60 + "\n")
+        for r in code_results:
             f.write(f"{r['title']}\n")
             f.write(f"Candidates: {', '.join(r['codes'])}\n")
-            f.write(f"Link: {r['link']}\n")
-            f.write("-" * 60 + "\n")
+            f.write(f"Link: {r['link']}\n\n")
 
-    print(f"Done. {len(results)} product(s) flagged. Results written to scan_results.txt")
+    print(f"Done. {len(price_results)} $1-or-less item(s), {len(code_results)} code candidate(s).")
+    print("Results written to scan_results.txt")
 
 
 if __name__ == "__main__":
