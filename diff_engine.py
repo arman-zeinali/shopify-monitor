@@ -41,6 +41,28 @@ COMMON_PROMO_FRAGMENTS = (
     "EXTRA", "BONUS", "SPECIAL", "SECRET", "LUCKY", "WIN",
 )
 
+LONG_TOKEN_PATTERN = re.compile(r'\b[A-Za-z0-9]{11,20}\b')
+
+PROMO_PHRASES = (
+    "discount code", "promo code", "coupon code",
+    "100% off", "% off",
+    "giveaway", "promotion",
+    "use code", "enter code",
+)
+
+
+def find_long_candidate_codes(text):
+    if not text:
+        return set()
+    tokens = LONG_TOKEN_PATTERN.findall(text)
+    return {t for t in tokens if is_candidate_code(t)}
+
+
+def find_promo_phrases(text):
+    if not text:
+        return set()
+    lowered = text.lower()
+    return {phrase for phrase in PROMO_PHRASES if phrase in lowered}
 
 def looks_like_measurement(token):
     """
@@ -190,9 +212,33 @@ def compare_description(old_text, new_text):
                 "context": (added_text or new_text)[:300],
             })
 
+    old_long_codes = find_long_candidate_codes(old_text)
+    new_long_codes = find_long_candidate_codes(new_text)
+    new_only_long_codes = new_long_codes - old_long_codes
+
+    if new_only_long_codes:
+        for code in new_only_long_codes:
+            events.append({
+                "type": "NEW_DISCOUNT_CODE",
+                "code": code,
+                "context": (added_text or new_text)[:300],
+            })
+
+    old_phrases = find_promo_phrases(old_text)
+    new_phrases = find_promo_phrases(new_text)
+    new_only_phrases = new_phrases - old_phrases
+
+    if new_only_phrases:
+        events.append({
+            "type": "NEW_DISCOUNT_CODE",
+            "code": "(phrase match)",
+            "context": ", ".join(sorted(new_only_phrases)) + " — " + (new_text[:300]),
+        })
+
     events.append({
         "type": "DESCRIPTION_CHANGED",
-        "diff_snippet": added_text[:300] if added_text else "(text removed or reordered)",
+        "diff_snippet": added_text[:2000] if added_text else "(text removed or reordered)",
+        "full_text": new_text or "",
     })
 
     return events

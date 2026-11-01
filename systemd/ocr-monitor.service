@@ -1,0 +1,18 @@
+[Unit]
+Description=LDJ Image OCR Monitor
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/shopify-monitor
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/home/ubuntu/shopify-monitor/.venv/bin/python ocr_monitor.py
+Restart=always
+RestartSec=30
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

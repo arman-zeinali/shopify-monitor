@@ -254,3 +254,36 @@ def set_metadata(key, value):
         conn.commit()
     finally:
         conn.close()
+
+
+def create_image_tables():
+    conn = get_connection()
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS product_images (
+            image_id INTEGER PRIMARY KEY,
+            product_id INTEGER,
+            src TEXT,
+            ocr_text TEXT,
+            last_seen TEXT
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+
+def image_exists(image_id):
+    conn = get_connection()
+    cursor = conn.execute("SELECT 1 FROM product_images WHERE image_id = ?", (image_id,))
+    result = cursor.fetchone() is not None
+    conn.close()
+    return result
+
+
+def insert_image(image_id, product_id, src, ocr_text, last_seen):
+    conn = get_connection()
+    conn.execute(
+        "INSERT INTO product_images (image_id, product_id, src, ocr_text, last_seen) VALUES (?, ?, ?, ?, ?)",
+        (image_id, product_id, src, ocr_text, last_seen)
+    )
+    conn.commit()
+    conn.close()

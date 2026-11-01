@@ -104,7 +104,14 @@ def format_event_message(product_title, product_handle, base_url, event):
             f"Link: {link}"
         )
     if t == "DESCRIPTION_CHANGED":
-        return f"📝 Description changed\n\n{product_title}\n\n{event['diff_snippet']}\n\nLink: {link}"
+        added = event.get("diff_snippet") or ""
+        full = event.get("full_text") or ""
+        parts = ["\U0001F4DD Description changed", "", product_title, "",
+                 "ADDED:", added[:1200]]
+        if full:
+            parts += ["", "FULL DESCRIPTION NOW:", full[:2200]]
+        parts += ["", f"Link: {link}"]
+        return "\n".join(parts)
 
     return f"{product_title}\n\n{t}\n\nLink: {link}"
 
@@ -149,8 +156,9 @@ def run_once(config):
             print(f"NEW PRODUCT: {product['title']}")
 
             link = f"{config['store']['base_url']}/products/{product['handle']}"
+            description_block = f"\n\n{product['description_text']}" if product['description_text'] else ""
             send_notification(
-                f"🆕 NEW PRODUCT\n\n{product['title']}\n\nLink: {link}",
+                f"🆕 NEW PRODUCT\n\n{product['title']}{description_block}\n\nLink: {link}",
                 config["telegram"]["bot_token"],
                 config["telegram"]["chat_ids"],
             )

@@ -1,0 +1,69 @@
+store:
+  name: LDJ
+  base_url: https://ldj.com
+  poll_interval: 20  # NOT USED - real value is POLL_INTERVAL_SECONDS in app.py
+
+telegram:
+  bot_token: "YOUR_TELEGRAM_BOT_TOKEN"
+  chat_ids:
+    - "YOUR_CHAT_ID"
+
+alerts:
+  new_product: true
+  price_drop_to_one: true
+  availability_change: true
+  description_change: true
+
+database:
+  path: data/shopify_monitor.db
+
+logging:
+  level: INFO
+
+site_monitor:
+  poll_interval: 60
+  pages:
+    - name: "Homepage Banner"
+      url: "https://ldj.com"
+      scope_to_class: "hero-banner"
+    - name: "FAQs"
+      url: "https://ldj.com/pages/faqs"
+    - name: "About Us"
+      url: "https://ldj.com/pages/about-us"
+  keywords:
+    - "giveaway"
+    - "prize"
+    - "$1"
+    - "win"
+    - "winner"
+    - "free"
+    - "contest"
+    - "coupon"
+    - "discount code"
+    - "promo code"
+    - "july"
+    - "instagram"
+    - "snatch"
+    - "annual"
+
+ocr_monitor:
+  poll_interval: 900
+  downscale_max_px: 1400
+  alert_min_words: 12
+  max_ocr_per_cycle: 25
+  min_gap_seconds: 2.0
+  max_gap_seconds: 6.0
+  keywords:
+    - "giveaway"
+    - "prize"
+    - "$1"
+    - "win"
+    - "winner"
+    - "contest"
+    - "coupon"
+    - "discount code"
+    - "promo code"
+    - "july"
+    - "instagram"
+    - "snatch"
+    - "annual"

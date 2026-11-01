@@ -1,0 +1,18 @@
+[Unit]
+Description=LDJ Site Text Monitor
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/shopify-monitor
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/home/ubuntu/shopify-monitor/.venv/bin/python site_monitor.py
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

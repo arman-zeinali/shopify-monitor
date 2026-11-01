@@ -1,0 +1,17 @@
+[Unit]
+Description=Shopify Monitor
+After=network.target
+
+[Service]
+Type=simple
+Environment=PYTHONUNBUFFERED=1
+User=ubuntu
+WorkingDirectory=/home/ubuntu/shopify-monitor
+ExecStart=/home/ubuntu/shopify-monitor/.venv/bin/python app.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+
+
