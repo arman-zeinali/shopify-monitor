@@ -1,7 +1,7 @@
 """
 backfill_ocr.py  (v2)
 
-One-shot historical scan of images already in LDJ's feed. Stores every
+One-shot historical scan of images already in the store's feed. Stores every
 OCR result in ocr_monitor.db so the text can be searched afterward
 without re-downloading anything.
 
@@ -14,7 +14,7 @@ Instead: collect now, analyse after. Run the scan, then run --report to
 see every scanned image ranked by how much text it contains. A promo
 graphic carrying an announcement will sit at the top of that list; a
 stamp closeup will not. This works without knowing which words to look
-for, which matters because LDJ has said the next giveaway will not be
+for, which matters because the store has said the next giveaway will not be
 findable by searching for obvious terms.
 
 Keyword matches still alert immediately during the scan, as a shortcut.
@@ -26,7 +26,7 @@ Tiers (by image dimensions):
   4  everything
 
 Writes only to ocr_monitor.db. Does not touch product_images or
-shopify_monitor.db. Images come from cdn.shopify.com; the only ldj.com
+shopify_monitor.db. Images come from cdn.shopify.com; the only the store site
 request is a single feed crawl.
 """
 

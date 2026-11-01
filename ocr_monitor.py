@@ -7,7 +7,7 @@ OCRs NEW product images across ALL vendors and alerts on two signals:
   2. TEXT-HEAVY -- extracted text contains many words, regardless of
      which words they are
 
-Signal 2 is the important one. LDJ has said the next giveaway will not
+Signal 2 is the important one. the store has said the next giveaway will not
 be findable by searching for terms like "$1", "giveaway", or "discount
 code". Keyword matching cannot survive an adversary who picks different
 words. Word count can: a photograph of a handbag yields little text (a
@@ -22,8 +22,8 @@ Isolation: own SQLite file (data/ocr_monitor.db), own table, own copy of
 send_notification. Does NOT touch product_images (owned by
 image_monitor.py) or shopify_monitor.db.
 
-Traffic: images come from cdn.shopify.com, not ldj.com. The only request
-to ldj.com is one feed crawl per cycle. Images are fetched serially with
+Traffic: images come from cdn.shopify.com, not the store site. The only request
+to the store site is one feed crawl per cycle. Images are fetched serially with
 randomized gaps and capped per cycle.
 """
 

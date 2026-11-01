@@ -1,5 +1,5 @@
 [Unit]
-Description=LDJ Image OCR Monitor
+Description=the store Image OCR Monitor
 After=network-online.target
 Wants=network-online.target
 

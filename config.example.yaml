@@ -1,6 +1,6 @@
 store:
-  name: LDJ
-  base_url: https://ldj.com
+  name: example-store
+  base_url: https://example-store.com
   poll_interval: 20  # NOT USED - real value is POLL_INTERVAL_SECONDS in app.py
 
 telegram:
@@ -24,12 +24,12 @@ site_monitor:
   poll_interval: 60
   pages:
     - name: "Homepage Banner"
-      url: "https://ldj.com"
+      url: "https://example-store.com"
       scope_to_class: "hero-banner"
     - name: "FAQs"
-      url: "https://ldj.com/pages/faqs"
+      url: "https://example-store.com/pages/faqs"
     - name: "About Us"
-      url: "https://ldj.com/pages/about-us"
+      url: "https://example-store.com/pages/about-us"
   keywords:
     - "giveaway"
     - "prize"

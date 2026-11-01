@@ -8,7 +8,7 @@ Two independent detection paths:
   2. Description text anomalies — any token that doesn't read as
      normal prose (all-caps, mixed alphanumeric, or otherwise
      structurally unusual) is treated as a candidate discount code,
-     regardless of what words surround it. LDJ's 6-character SKU
+     regardless of what words surround it. the store's 6-character SKU
      format is filtered out separately based on observed catalog data.
 
 Both return structured event dicts, not pre-formatted strings, so
@@ -28,7 +28,7 @@ STOPWORDS = {
     "NWT", "NWOT", "VGC", "EUC", "GUC", "FGC", "GENTLY", "USED",
     "GHW", "SHW", "RHW", "PHW",
     "XS", "XXS", "SM", "MD", "LG", "XL", "XXL", "OS",
-    "USD", "CAD", "LDJ", "SKU", "ID",
+    "USD", "CAD", "SKU", "ID",
     "NEW", "SALE", "SHIP", "SHIPPING", "FREE", "GIFT", "LIMITED",
     "ONLY", "TODAY", "NOW", "HOT", "SOLD", "OUT",
     "CM", "MM", "IN",
@@ -76,7 +76,7 @@ def looks_like_measurement(token):
 def looks_like_serial_number(token):
     """
     Filters manufacturer SKU/serial codes. Observed pattern from
-    LDJ's actual catalog: 6-character alphanumeric strings with no
+    the store's actual catalog: 6-character alphanumeric strings with no
     promo-word fragment (e.g., QREYAB, 9KR90U, E3HBMA). Real promo
     codes are brandable and readable; SKUs are arbitrary.
     """

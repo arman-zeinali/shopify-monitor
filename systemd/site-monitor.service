@@ -1,5 +1,5 @@
 [Unit]
-Description=LDJ Site Text Monitor
+Description=the store Site Text Monitor
 After=network-online.target
 Wants=network-online.target
 
