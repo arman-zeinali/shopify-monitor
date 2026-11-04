@@ -1,6 +1,6 @@
 # shopify-monitor
 
-A set of Python services that watched a luxury resale store's Shopify catalog (about 3,000 products) around the clock and sent Telegram alerts the moment anything changed. Ran unattended on AWS EC2 for about a month in summer 2026.
+A set of Python services that watched a luxury resale store's Shopify catalog (about 2,700 products) around the clock and sent Telegram alerts the moment anything changed. Ran unattended on AWS EC2 for about a month in summer 2026.
 
 ## Why I built it
 
